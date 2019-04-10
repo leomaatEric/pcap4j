@@ -4,9 +4,12 @@ import static org.junit.Assert.*;
 
 import java.net.Inet6Address;
 import java.net.InetAddress;
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.pcap4j.packet.GtpV1Packet.GtpV1ExtensionHeader;
 import org.pcap4j.packet.GtpV1Packet.GtpV1Header;
 import org.pcap4j.packet.GtpV1Packet.ProtocolType;
 import org.pcap4j.packet.namednumber.EtherType;
@@ -31,43 +34,65 @@ public class GtpV1PacketTest extends AbstractPacketTest {
   private final boolean sequenceNumberFlag;
   private final boolean nPduNumberFlag;
   private final GtpV1MessageType messageType;
-  private final short length;
   private final int teid;
-  private final Short sequenceNumber;
-  private final Byte nPduNumber;
+  private final short sequenceNumber;
+  private final byte nPduNumber;
   private final GtpV1ExtensionHeaderType nextExtensionHeaderType;
+  private final List<GtpV1Packet.GtpV1ExtensionHeader> gtpV1ExtensionHeaderList;
+  private final byte extensionPduType;
   private final GtpV1Packet packet;
+  private final boolean extensionPppFlag;
+  private final byte extensionQfi;
+  private final byte extensionPpi;
 
   public GtpV1PacketTest() throws Exception {
     this.version = GtpVersion.V1;
     this.protocolType = ProtocolType.GTP;
     this.reserved = false;
-    this.extensionHeaderFlag = false;
+    this.extensionHeaderFlag = true;
     this.sequenceNumberFlag = true;
     this.nPduNumberFlag = true;
     this.messageType = GtpV1MessageType.ECHO_RESPONSE;
-    this.length = 8;
     this.teid = 1234567890;
     this.sequenceNumber = 4321;
     this.nPduNumber = (byte) 222;
-    this.nextExtensionHeaderType = GtpV1ExtensionHeaderType.PDCP_PDU_NUMBER;
+    this.nextExtensionHeaderType = GtpV1ExtensionHeaderType.PDU_SESSION_CONTAINER;
+    this.gtpV1ExtensionHeaderList = new ArrayList<>();
+    this.extensionPduType = (byte) 0;
+    this.extensionPppFlag = true;
+    this.extensionQfi = (byte) 15;
+    this.extensionPpi = (byte) 12;
+
+    GtpV1PduSessionContainerExtensionHeader.Builder extensionHeaderBuilder =
+        new GtpV1PduSessionContainerExtensionHeader.Builder();
+    GtpV1Packet.GtpV1ExtensionHeader extensionHeader =
+        extensionHeaderBuilder
+            .correctLengthAtBuild(true)
+            .pduType(extensionPduType)
+            .ppp(extensionPppFlag)
+            .qfi(extensionQfi)
+            .ppi(extensionPpi)
+            .nextExtensionHeaderType(GtpV1ExtensionHeaderType.getInstance((byte) 0))
+            .build();
+    gtpV1ExtensionHeaderList.add(extensionHeader);
 
     UnknownPacket.Builder unknownb = new UnknownPacket.Builder();
     unknownb.rawData(new byte[] {(byte) 0, (byte) 1, (byte) 2, (byte) 3});
 
     GtpV1Packet.Builder b = new GtpV1Packet.Builder();
-    b.version(version)
+    b.correctLengthAtBuild(true)
+        .version(version)
         .protocolType(protocolType)
         .reserved(reserved)
         .extensionHeaderFlag(extensionHeaderFlag)
         .sequenceNumberFlag(sequenceNumberFlag)
         .nPduNumberFlag(nPduNumberFlag)
         .messageType(messageType)
-        .length(length)
         .teid(teid)
         .sequenceNumber(sequenceNumber)
         .nPduNumber(nPduNumber)
         .nextExtensionHeaderType(nextExtensionHeaderType)
+        .gtpV1ExtensionHeaders(gtpV1ExtensionHeaderList)
         .payloadBuilder(unknownb);
 
     this.packet = b.build();
@@ -145,11 +170,21 @@ public class GtpV1PacketTest extends AbstractPacketTest {
     assertEquals(sequenceNumberFlag, h.isSequenceNumberFieldPresent());
     assertEquals(nPduNumberFlag, h.isNPduNumberFieldPresent());
     assertEquals(messageType, h.getMessageType());
-    assertEquals(length, h.getLength());
     assertEquals(teid, h.getTeid());
-    assertEquals(sequenceNumber, h.getSequenceNumber());
-    assertEquals(nPduNumber, h.getNPduNumber());
+    assertEquals(sequenceNumber, h.getSequenceNumber().shortValue());
+    assertEquals(nPduNumber, h.getNPduNumber().byteValue());
     assertEquals(nextExtensionHeaderType, h.getNextExtensionHeaderType());
+
+    GtpV1ExtensionHeader extensionHeader = h.getExtensionHeaders().get(0);
+    assertEquals(extensionHeader.getClass(), GtpV1PduSessionContainerExtensionHeader.class);
+
+    GtpV1PduSessionContainerExtensionHeader pduSessionContainerExtentionHeader =
+        (GtpV1PduSessionContainerExtensionHeader) extensionHeader;
+    assertEquals(2, pduSessionContainerExtentionHeader.getLength());
+    assertEquals(extensionPduType, pduSessionContainerExtentionHeader.getPduType());
+    assertTrue(extensionPppFlag);
+    assertEquals(extensionQfi, pduSessionContainerExtentionHeader.getQfi());
+    assertEquals(extensionPpi, pduSessionContainerExtentionHeader.getPpi());
 
     GtpV1Packet.Builder b = packet.getBuilder();
     GtpV1Packet p;
