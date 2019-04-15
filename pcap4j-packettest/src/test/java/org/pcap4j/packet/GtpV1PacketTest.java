@@ -57,7 +57,7 @@ public class GtpV1PacketTest extends AbstractPacketTest {
     this.sequenceNumber = 4321;
     this.nPduNumber = (byte) 222;
     this.nextExtensionHeaderType = GtpV1ExtensionHeaderType.PDU_SESSION_CONTAINER;
-    this.gtpV1ExtensionHeaderList = new ArrayList<>();
+    this.gtpV1ExtensionHeaderList = new ArrayList<GtpV1Packet.GtpV1ExtensionHeader>();
     this.extensionPduType = (byte) 0;
     this.extensionPppFlag = true;
     this.extensionQfi = (byte) 15;

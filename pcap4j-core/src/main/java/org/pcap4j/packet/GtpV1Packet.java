@@ -405,7 +405,7 @@ public final class GtpV1Packet extends AbstractPacket {
       this.length = ByteArrays.getShort(rawData, LENGTH_OFFSET + offset);
       this.teid = ByteArrays.getInt(rawData, TUNNEL_ID_OFFSET + offset);
 
-      extensionHeaders = new ArrayList<>();
+      extensionHeaders = new ArrayList<GtpV1ExtensionHeader>();
       if (sequenceNumberFlag || nPduNumberFlag || extensionHeaderFlag) {
         if (length < EXTENSION_HEADER_OFFSET) {
           StringBuilder sb = new StringBuilder(80);
